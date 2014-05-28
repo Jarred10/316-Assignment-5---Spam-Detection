@@ -83,9 +83,10 @@ public class BayesNetEstimate {
 				//increase true count
 				if(line[n.index].equals("1"))
 					n.count[b]++;
-
-				b += (int) Math.pow(2, n.parents.length);
-				n.count[b]++;
+				else{
+					b += (int) Math.pow(2, n.parents.length);
+					n.count[b]++;
+				}
 			}
 		}
 
@@ -93,7 +94,7 @@ public class BayesNetEstimate {
 		for(Node n : network){
 			n.probs = new double[(int) Math.pow(2, n.parents.length)];
 			for(int i = 0; i < n.probs.length; i++)
-				n.probs[i] = (double)n.count[i] / (double)(n.count[i + (int)Math.pow(2, n.parents.length)]);
+				n.probs[i] = (double)n.count[i] / (double)(n.count[i] + n.count[i + (int)Math.pow(2, n.parents.length)]);
 		}
 	}
 

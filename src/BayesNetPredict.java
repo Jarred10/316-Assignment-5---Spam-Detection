@@ -3,13 +3,14 @@ import java.io.FileNotFoundException;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Random;
 import java.util.Scanner;
 
 
 public class BayesNetPredict {
 
 	static Scanner s;
-
+	
 	public static void main(String[] args) throws FileNotFoundException {
 
 		//creates the network from the file passed in as first argument, the layout of the network
@@ -73,9 +74,11 @@ public class BayesNetPredict {
 				//increase true count
 				if(line[n.index].equals("1"))
 					n.count[b]++;
-
-				b += (int) Math.pow(2, n.parents.length);
-				n.count[b]++;
+				//else increase false count
+				else{
+					b += (int) Math.pow(2, n.parents.length);
+					n.count[b]++;
+				}
 			}
 		}
 
@@ -83,30 +86,54 @@ public class BayesNetPredict {
 		for(Node n : network){
 			n.probs = new double[(int) Math.pow(2, n.parents.length)];
 			for(int i = 0; i < n.probs.length; i++)
-				n.probs[i] = (double)n.count[i] / (double)(n.count[i + (int)Math.pow(2, n.parents.length)]);
+				n.probs[i] = (double)n.count[i] / (double)(n.count[i] + n.count[i + (int)Math.pow(2, n.parents.length)]);
 		}
 	}
-	
+
 	public static void testNetwork(String testingFilePath, ArrayList<Node> network) throws FileNotFoundException {
+
+		PrintStream stdout = System.out;
+		System.setOut(new PrintStream("completedTest.csv"));
+
 		s = new Scanner(new File(testingFilePath));
 		String headers[] = s.nextLine().split(",");
-		
+
 		for(int i = 0; i < headers.length; i++){
 			Node n;
 			if((n = findNode(headers[i], network)) != null)
 				n.index = i;
+			System.out.print(headers[i] + ", ");
 		}
+		System.out.println();
+
+		//assumes there is only one unknown column in whole file
+		Node unknown = null;
 		
-		//find the column with unknown value
-		Node unknown;
-		
-		String values[] = s.nextLine().split(",");
-		for(int i = 0; i < values.length; i++){
-			if(values[i].equals("?")){
-				unknown = findNode(headers[i],network);
+		while(s.hasNextLine()){
+			String values[] = s.nextLine().split(",");
+			for(int i = 0; i < network.size(); i++){
+				Node n = network.get(i);
+				if(unknown == null && values[n.index].equals("?")) unknown = n;
+				else {
+					n.value = (values[n.index].equals("1"));
+				}
 			}
+			
+			//if the probability exactly inferred from network for unknown node is less than half
+			if(unknown.exactInference(network) < 0.5) 
+				unknown.value = false; //set unknown node to false
+			else unknown.value = true; //else set to true
+			
+
+			for(int i = 0; i < headers.length; i++){
+				if(unknown.index == i){
+					System.out.print((unknown.value? 1 : 0) + ", ");
+				}
+				else System.out.print(values[i] + ", ");
+			}
+			System.out.println();
 		}
-		
+		System.setOut(stdout);
 	}
 
 	/**

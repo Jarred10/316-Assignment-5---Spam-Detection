@@ -1,3 +1,5 @@
+import java.util.ArrayList;
+
 class Node {
 
 	// The name of the node
@@ -16,7 +18,7 @@ class Node {
 	public double[] probs;
 
 	// The current value of the node
-	private boolean value;
+	public boolean value;
 
 	/**
 	 * Initializes the node with empty parents array
@@ -31,15 +33,31 @@ class Node {
 	 * 
 	 * @return The conditional probability of this node, given its parents.
 	 */
-	private double conditionalProbability() {
+	public double conditionalProbability() {
 
 		int index = 0;
 		for (int i = 0; i < parents.length; i++) {
-			if (parents[i].value == false) {
+			if (parents[i].value) {
 				index += Math.pow(2, parents.length - i - 1);
 			}
 		}
 		return probs[index];
+	}
+	
+	public double exactInference(ArrayList<Node> network) {
+		
+		double trueProb = 1;
+		double falseProb = 1;
+		for(Node n : network){
+			value = true;
+			double nodeProb = n.conditionalProbability();
+			trueProb *= n.value? nodeProb : 1 - nodeProb;
+			value = false;
+			nodeProb = n.conditionalProbability();
+			falseProb *= n.value? nodeProb : 1 - nodeProb;
+		}		
+		
+		return (trueProb / (trueProb + falseProb));
 	}
 
 	public String toString(){
@@ -50,7 +68,6 @@ class Node {
 			}
 			value = value.substring(0, value.length() - 1);
 		}
-		value += " count size: " + count.length;
 		return value;
 	}
 	
