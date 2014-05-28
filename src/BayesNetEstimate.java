@@ -42,20 +42,22 @@ public class BayesNetEstimate {
 	 * @throws FileNotFoundException
 	 */
 	public static ArrayList<Node> createNetwork(String networkFilePath) throws FileNotFoundException {
-
+	
 		s = new Scanner(new File(networkFilePath));
 		ArrayList<Node> network = new ArrayList<Node>();
-
+		
 		while(s.hasNextLine()){
 			String[] line = s.nextLine().split(" ");
+			//creates new node, passing in string at first index of line array, with comma taken out
 			Node n = new Node(line[0].substring(0, line[0].length() - 1));
-			network.add(n);
-			n.parents = new Node[line.length - 1];
+			network.add(n); //adds node to network in order
+			n.parents = new Node[line.length - 1]; //makes all parents for node, using rest of line
 			for(int i = 0; i < n.parents.length; i++){
 				n.parents[i] = findNode(line[i+1], network);
 			}
+			//create array large enough to count true and false for each child and the node itself
 			n.count = new int[(int) Math.pow(2, n.parents.length + 1)];
-			Arrays.fill(n.count, 1);
+			Arrays.fill(n.count, 1); //starts counts at 1 to avoid zero frequency problem
 		}
 		return network;
 	}
@@ -63,37 +65,41 @@ public class BayesNetEstimate {
 	public static void trainNetwork(String trainingFilePath, ArrayList<Node> network) throws FileNotFoundException {
 		s = new Scanner(new File(trainingFilePath));
 		String headers[] = s.nextLine().split(",");
-
-		//sets all the indexes of the network in our network
+	
+		//sets all the indexes of the network in our network using headers read in and there respective index
 		for(int i = 0; i < headers.length; i++){
 			Node n;
 			if((n = findNode(headers[i], network)) != null)
 				n.index = i;
 		}
-
+		
+		//for all training data
 		while(s.hasNextLine()){
 			String[] line = s.nextLine().split(",");
+			//for all nodes, read the value of their parents and create the mask based on parents values
 			for(Node n : network){
-				int b = 0;
+				int parentMask = 0;
 				for(int i = 0; i < n.parents.length; i++){
-					b = b << 1;
+					parentMask = parentMask << 1; //bitshift the mask over 1
 					if(line[n.parents[i].index].equals("1"))
-						b += 1;
+						parentMask += 1; //if parent was true, set the bit
 				}
 				//increase true count
 				if(line[n.index].equals("1"))
-					n.count[b]++;
+					n.count[parentMask]++;
+				//else increase false count, the mask for this has the most significant bit set
 				else{
-					b += (int) Math.pow(2, n.parents.length);
-					n.count[b]++;
+					parentMask += (int) Math.pow(2, n.parents.length);
+					n.count[parentMask]++;
 				}
 			}
 		}
-
+	
 		//set probabilities
 		for(Node n : network){
 			n.probs = new double[(int) Math.pow(2, n.parents.length)];
 			for(int i = 0; i < n.probs.length; i++)
+				//probability is equal to true count over true plus false count
 				n.probs[i] = (double)n.count[i] / (double)(n.count[i] + n.count[i + (int)Math.pow(2, n.parents.length)]);
 		}
 	}
@@ -131,17 +137,17 @@ public class BayesNetEstimate {
 			}
 
 			//mask to use to index into probabilies, also printed before probility
-			int i = 0;
-			while(i < (int)Math.pow(2, n.parents.length)){
+			int mask = 0;
+			while(mask < (int) Math.pow(2, n.parents.length)){
 
 				//loops through bits from (length of parents - 1) to 0, print value of i at that bit
 				int j = n.parents.length - 1;
 				while(j >= 0){
-					System.out.print(((i >>> j) & 1) + ", ");
+					System.out.print(((mask >>> j) & 1) + ", ");
 					j--;
 				}
-				System.out.println(n.probs[i]);
-				i++;
+				System.out.println(n.probs[mask]);
+				mask++;
 			}
 			System.out.println();
 		}
